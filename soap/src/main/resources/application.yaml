@@ -1,3 +1,13 @@
 spring:
   application:
     name: soap
+
+app:
+  namespace-url: ${NAMESPACE_URL:http://elyashrvich.com/soap/weather}
+  classpath-root: ${CLASSPATH_ROOT:xsd/weather.xsd}
+  jaxb-context-path: ${JAXB_CONTEXT_PATH:com.elyashrvich.soap.wsdl}
+  port-type-name: ${PORT_TYPE_NAME:WeatherPort}
+  location-uri: ${LOCATION_URI:/ws}
+  servlet-mapping: ${SERVLET_MAPPING:/ws/*}
+  fault:
+    server-message: ${SERVER_FAULT_MESSAGE:Internal server error occurred while processing the request.}

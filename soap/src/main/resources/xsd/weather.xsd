@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:tns="http://elyashrvich.com/soap/weather"
+           targetNamespace="http://elyashrvich.com/soap/weather"
+           elementFormDefault="qualified">
+
+    <xs:element name="getWeatherByCityRequest">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="city" type="xs:string"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:element name="getWeatherByCityResponse">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="weather" type="tns:weather"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:element name="deleteWeatherByCityRequest">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="city" type="xs:string"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:element name="deleteWeatherByCityResponse">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="city" type="xs:string"/>
+                <xs:element name="status" type="xs:string"/>
+                <xs:element name="message" type="xs:string"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:complexType name="weather">
+        <xs:sequence>
+            <xs:element name="city" type="xs:string"/>
+            <xs:element name="temperatureCelsius" type="xs:double"/>
+            <xs:element name="humidityPercent" type="xs:int"/>
+            <xs:element name="windSpeedKph" type="xs:double"/>
+            <xs:element name="description" type="xs:string"/>
+            <xs:element name="updatedAt" type="xs:string"/>
+        </xs:sequence>
+    </xs:complexType>
+
+</xs:schema>

@@ -1,0 +1,284 @@
+{
+  "info": {
+    "_postman_id": "a911ccae-fc41-47ea-8541-8697d5a53ceb",
+    "name": "Weather SOAP Service",
+    "description": "Contract-first SOAP service for weather data. Single endpoint POST {{baseUrl}}/ws, two operations (getWeatherByCity, deleteWeatherByCity) routed by payload root, errors returned as SOAP Fault.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080", "type": "string" },
+    { "key": "namespace", "value": "http://elyashrvich.com/soap/weather", "type": "string" },
+    { "key": "existingCity", "value": "Minsk", "type": "string" },
+    { "key": "unknownCity", "value": "Atlantis", "type": "string" },
+    { "key": "cityToDelete", "value": "London", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "WSDL",
+      "item": [
+        {
+          "name": "Get WSDL",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ws/weather.wsdl",
+              "host": ["{{baseUrl}}"],
+              "path": ["ws", "weather.wsdl"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('WSDL exposes the weather namespace', function () {",
+                  "    pm.expect(pm.response.text()).to.include('targetNamespace=\"' + pm.collectionVariables.get('namespace') + '\"');",
+                  "});",
+                  "",
+                  "pm.test('WSDL declares both operations', function () {",
+                  "    const body = pm.response.text();",
+                  "    pm.expect(body).to.include('getWeatherByCity');",
+                  "    pm.expect(body).to.include('deleteWeatherByCity');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Get Weather By City",
+      "item": [
+        {
+          "name": "Get Weather - Success",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "text/xml; charset=utf-8" },
+              { "key": "SOAPAction", "value": "\"\"" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "<?xml version=\"1.0\"?>\n<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:wea=\"{{namespace}}\">\n  <soapenv:Body>\n    <wea:getWeatherByCityRequest>\n      <wea:city>{{existingCity}}</wea:city>\n    </wea:getWeatherByCityRequest>\n  </soapenv:Body>\n</soapenv:Envelope>",
+              "options": { "raw": { "language": "xml" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ws",
+              "host": ["{{baseUrl}}"],
+              "path": ["ws"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Content-Type is text/xml', function () {",
+                  "    pm.expect(pm.response.headers.get('Content-Type')).to.include('text/xml');",
+                  "});",
+                  "",
+                  "pm.test('Response is not a SOAP Fault', function () {",
+                  "    pm.expect(pm.response.text()).to.not.include('<SOAP-ENV:Fault>');",
+                  "});",
+                  "",
+                  "pm.test('Weather entity has all 6 fields', function () {",
+                  "    const body = pm.response.text();",
+                  "    pm.expect(body).to.include('<ns2:city>' + pm.collectionVariables.get('existingCity') + '</ns2:city>');",
+                  "    pm.expect(body).to.include('temperatureCelsius');",
+                  "    pm.expect(body).to.include('humidityPercent');",
+                  "    pm.expect(body).to.include('windSpeedKph');",
+                  "    pm.expect(body).to.include('description');",
+                  "    pm.expect(body).to.include('updatedAt');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Weather - Not Found (Fault)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "text/xml; charset=utf-8" },
+              { "key": "SOAPAction", "value": "\"\"" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "<?xml version=\"1.0\"?>\n<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:wea=\"{{namespace}}\">\n  <soapenv:Body>\n    <wea:getWeatherByCityRequest>\n      <wea:city>{{unknownCity}}</wea:city>\n    </wea:getWeatherByCityRequest>\n  </soapenv:Body>\n</soapenv:Envelope>",
+              "options": { "raw": { "language": "xml" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ws",
+              "host": ["{{baseUrl}}"],
+              "path": ["ws"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 500 (SOAP Fault)', function () {",
+                  "    pm.response.to.have.status(500);",
+                  "});",
+                  "",
+                  "pm.test('Body is a SOAP Fault, not JSON', function () {",
+                  "    const body = pm.response.text();",
+                  "    pm.expect(body).to.include('<SOAP-ENV:Fault>');",
+                  "    pm.expect(body).to.not.include('{\"error\"');",
+                  "});",
+                  "",
+                  "pm.test('Fault is a Client fault', function () {",
+                  "    pm.expect(pm.response.text()).to.include('SOAP-ENV:Client');",
+                  "});",
+                  "",
+                  "pm.test('Fault string mentions the missing city', function () {",
+                  "    pm.expect(pm.response.text()).to.include(pm.collectionVariables.get('unknownCity'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Delete Weather By City",
+      "item": [
+        {
+          "name": "Delete Weather - Success",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "text/xml; charset=utf-8" },
+              { "key": "SOAPAction", "value": "\"\"" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "<?xml version=\"1.0\"?>\n<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:wea=\"{{namespace}}\">\n  <soapenv:Body>\n    <wea:deleteWeatherByCityRequest>\n      <wea:city>{{cityToDelete}}</wea:city>\n    </wea:deleteWeatherByCityRequest>\n  </soapenv:Body>\n</soapenv:Envelope>",
+              "options": { "raw": { "language": "xml" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ws",
+              "host": ["{{baseUrl}}"],
+              "path": ["ws"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Deletion status is SUCCESS', function () {",
+                  "    pm.expect(pm.response.text()).to.include('<ns2:status>SUCCESS</ns2:status>');",
+                  "});",
+                  "",
+                  "pm.test('Response echoes the deleted city', function () {",
+                  "    pm.expect(pm.response.text()).to.include('<ns2:city>' + pm.collectionVariables.get('cityToDelete') + '</ns2:city>');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Weather After Delete (Fault)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "text/xml; charset=utf-8" },
+              { "key": "SOAPAction", "value": "\"\"" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "<?xml version=\"1.0\"?>\n<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:wea=\"{{namespace}}\">\n  <soapenv:Body>\n    <wea:getWeatherByCityRequest>\n      <wea:city>{{cityToDelete}}</wea:city>\n    </wea:getWeatherByCityRequest>\n  </soapenv:Body>\n</soapenv:Envelope>",
+              "options": { "raw": { "language": "xml" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ws",
+              "host": ["{{baseUrl}}"],
+              "path": ["ws"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 500 (SOAP Fault)', function () {",
+                  "    pm.response.to.have.status(500);",
+                  "});",
+                  "",
+                  "pm.test('Deleted city can no longer be found', function () {",
+                  "    const body = pm.response.text();",
+                  "    pm.expect(body).to.include('<SOAP-ENV:Fault>');",
+                  "    pm.expect(body).to.include(pm.collectionVariables.get('cityToDelete'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete Weather - Not Found (Fault)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "text/xml; charset=utf-8" },
+              { "key": "SOAPAction", "value": "\"\"" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "<?xml version=\"1.0\"?>\n<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:wea=\"{{namespace}}\">\n  <soapenv:Body>\n    <wea:deleteWeatherByCityRequest>\n      <wea:city>{{cityToDelete}}</wea:city>\n    </wea:deleteWeatherByCityRequest>\n  </soapenv:Body>\n</soapenv:Envelope>",
+              "options": { "raw": { "language": "xml" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ws",
+              "host": ["{{baseUrl}}"],
+              "path": ["ws"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 500 (SOAP Fault)', function () {",
+                  "    pm.response.to.have.status(500);",
+                  "});",
+                  "",
+                  "pm.test('Fault indicates nothing to delete', function () {",
+                  "    const body = pm.response.text();",
+                  "    pm.expect(body).to.include('<SOAP-ENV:Fault>');",
+                  "    pm.expect(body).to.include('Cannot delete');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

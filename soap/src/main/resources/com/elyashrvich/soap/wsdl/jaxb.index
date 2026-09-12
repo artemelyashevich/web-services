@@ -1,0 +1,5 @@
+Weather
+GetWeatherByCityRequest
+GetWeatherByCityResponse
+DeleteWeatherByCityRequest
+DeleteWeatherByCityResponse

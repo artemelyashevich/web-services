@@ -1,0 +1,28 @@
+ARG JAVA_VERSION=21
+
+FROM eclipse-temurin:${JAVA_VERSION}-jdk AS build
+ARG PROJECT_NAME
+ARG SKIP_TESTS=false
+WORKDIR /workspace
+
+COPY ${PROJECT_NAME}/.mvn/ .mvn/
+COPY ${PROJECT_NAME}/mvnw ${PROJECT_NAME}/pom.xml ./
+RUN chmod +x mvnw && ./mvnw -q -B dependency:go-offline
+
+COPY ${PROJECT_NAME}/src ./src
+RUN ./mvnw -q -B clean package -DskipTests=${SKIP_TESTS}
+
+RUN set -eux; \
+    artifact="$(find target -maxdepth 1 -type f \( -name '*.jar' -o -name '*.war' \) ! -name 'original-*' | head -n1)"; \
+    test -n "$artifact"; \
+    mv "$artifact" app.jar
+
+FROM eclipse-temurin:${JAVA_VERSION}-jre AS runtime
+WORKDIR /app
+
+RUN groupadd --system app && useradd --system --gid app app
+COPY --from=build /workspace/app.jar ./app.jar
+USER app
+
+EXPOSE 8080
+ENTRYPOINT ["java", "-jar", "app.jar"]
